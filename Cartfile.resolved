@@ -1,3 +1,3 @@
 github "antitypical/result" "1.0.2"
-github "carthage/commandant" "0.8.3"
+github "carthage/commandant" "0.9.0"
 github "reactivecocoa/reactivecocoa" "v4.0.1"

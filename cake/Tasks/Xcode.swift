@@ -141,8 +141,7 @@ internal func copyFrameworks(projectPath: String, scheme: String, configuration:
     return buildSettings(projectPath, scheme: scheme, configuration: configuration)
         .flatMap(.Concat) { settings -> SignalProducer<[String], TaskError> in
             guard let frameworkSearchPaths = settings["FRAMEWORK_SEARCH_PATHS"] else {
-                let error = TaskError.ShellTaskFailed(Task(xcodebuildPath), exitCode: 1, standardError: "")
-                return SignalProducer(error: error)
+                return SignalProducer.empty
             }
 
             return SignalProducer(value: frameworkSearchPaths.componentsSeparatedByString(" ").filter { $0.characters.count > 0 })
@@ -175,8 +174,7 @@ internal func copyLibraries(projectPath: String, scheme: String, configuration: 
     return buildSettings(projectPath, scheme: scheme, configuration: configuration)
         .flatMap(.Concat) { settings -> SignalProducer<[String], TaskError> in
             guard let frameworkSearchPaths = settings["LIBRARY_SEARCH_PATHS"] else {
-                let error = TaskError.ShellTaskFailed(Task(xcodebuildPath), exitCode: 1, standardError: "")
-                return SignalProducer(error: error)
+                return SignalProducer.empty
             }
 
             return SignalProducer(value: frameworkSearchPaths.componentsSeparatedByString(" ").filter { $0.characters.count > 0 })
