@@ -111,8 +111,11 @@ internal func generatedSYM(forProjectsAtPath path: String)  -> SignalProducer<()
 }
 
 internal func generateFatBinaries(osPath: String, simulatorPath: String, outputDirectory: String) -> SignalProducer<TaskEvent<NSData>, TaskError> {
-    return find(osPath, pattern: "*.framework").mapOutputToString().split()
+    return find(osPath, pattern: "*.framework")
+        .mapOutputToString()
+        .split()
         .combineLatestWith( find(simulatorPath, pattern: "*.framework").mapOutputToString().split() )
+        .flatMapError { _ in SignalProducer(value: ([], [])) }
         .flatMap(.Concat) { (osFrameworkPaths, simulatorFrameworkPaths) -> SignalProducer<TaskEvent<NSData>, TaskError> in
             let extractFrameworkInformation = { (fullPath: String) -> (fullName:String, name: String) in
                 let frameworkFullName = (fullPath as NSString).lastPathComponent
@@ -174,6 +177,7 @@ internal func copyDSYM(inDirectory directory: String, toDirectory to: String) ->
     return find(directory, pattern: "*.dSYM")
         .mapOutputToString()
         .split()
+        .flatMapError { _ in SignalProducer(value: []) }
         .flatMap(.Concat) { dsymPaths -> SignalProducer<TaskEvent<NSData>, TaskError> in
             var outputSignal = SignalProducer<TaskEvent<NSData>, TaskError>.empty
             for dsymPath in dsymPaths {
