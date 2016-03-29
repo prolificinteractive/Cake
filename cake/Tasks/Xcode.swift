@@ -19,7 +19,7 @@ internal enum SDK {
     var buildParams: [String] {
         switch self {
         case .Simulator:
-            return ["-destination", "platform=iOS Simulator,name=iPhone 6,OS=latest"]
+            return ["-destination", "platform=iOS Simulator,name=iPhone 6,OS=latest", "-sdk", "iphonesimulator"]
         case .iPhoneOS:
             return ["-sdk", "iphoneos"]
         }
@@ -27,10 +27,57 @@ internal enum SDK {
 
 }
 
-internal func xcodebuild(project: String, scheme: String,
+internal func fetchAllTargets(project: String) -> SignalProducer<[String], TaskError> {
+    let task = Task(xcodebuildPath, arguments: ["-project", project, "-list"])
+
+    return launchTask(task)
+        .mapOutputToString()
+        .split()
+        .trim()
+        .map { allOutput in
+            guard let targetsIndex = allOutput.indexOf("Targets:")?.advancedBy(1) else {
+                return []
+            }
+
+            guard let configsIndex = allOutput.indexOf("Build Configurations:")?.advancedBy(-1) else {
+                return []
+            }
+
+            guard configsIndex > targetsIndex else {
+                return []
+            }
+
+            let newArray = allOutput[targetsIndex...configsIndex]
+            return Array(newArray)
+    }
+}
+
+internal func diff(targets targets: [String], oldDirectory: String, newDirectory: String) -> SignalProducer<[String], TaskError> {
+
+    return targets.reduce(SignalProducer<String, TaskError>.empty) { (current, next) -> SignalProducer<String, TaskError> in
+        return current.concat(
+            diff("\(oldDirectory)/\(next)", "\(newDirectory)/\(next)")
+                .filter { $0 }
+                .map { _ in next }
+                .filter { $0 != "Pods" }
+        )
+    }
+        .collect()
+}
+
+internal func diff(leftDirectory: String, _ rightDirectory: String) -> SignalProducer<Bool, TaskError> {
+    let task = Task("/usr/bin/diff", arguments: ["-r", leftDirectory, rightDirectory])
+    return launchTask(task)
+        .mapOutput { data in
+            return data.length > 0
+        }
+        .flatMapError { _ in SignalProducer(value: true) }
+}
+
+internal func xcodebuild(project: String, target: String,
     sdk: SDK, configurationBuildDir: String) -> SignalProducer<TaskEvent<NSData>, TaskError> {
 
-        let settings = XcodebuildSettings(project: project, scheme: scheme, configuration: "Release", sdk: sdk, configurationBuildDir: configurationBuildDir)
+        let settings = XcodebuildSettings(project: project, target: target, configuration: "Release", sdk: sdk, configurationBuildDir: configurationBuildDir)
 
         let task = Task(xcodebuildPath, arguments: settings.toParams())
         return launchTask(task)
@@ -156,8 +203,12 @@ internal func copyFrameworks(projectPath: String, scheme: String, configuration:
                         .flatMap(.Concat) { frameworks -> SignalProducer<TaskEvent<NSData>, TaskError> in
                             var output = SignalProducer<TaskEvent<NSData>, TaskError>.empty
                             for framework in frameworks {
+                                let name = (framework as NSString).lastPathComponent
                                 output = output.then (
-                                    mv(framework, directory)
+                                    rm ("\(directory)/\(name)")
+                                        .then (
+                                            mv(framework, directory)
+                                        )
                                 )
                             }
 
@@ -181,7 +232,10 @@ internal func copyLibraries(projectPath: String, scheme: String, configuration: 
     }
         .flatMap(.Concat) { librarySearchPaths -> SignalProducer<TaskEvent<NSData>, TaskError> in
             return librarySearchPaths.reduce(SignalProducer<TaskEvent<NSData>, TaskError>.empty) { (signal, path) in
-                return signal.then( cp(path, directory) )
+                let name = (path as NSString).lastPathComponent
+                return signal
+                    .then( rm("\(directory)/\(name)") )
+                    .then( cp(path, directory) )
             }
     }
 }
@@ -266,7 +320,7 @@ internal func codeSign(executablePath: String, codeSigningIdentity: String) -> S
 private struct XcodebuildSettings {
 
     let project: String
-    let scheme: String
+    let target: String
     let configuration: String
     let sdk: SDK
     let configurationBuildDir: String
@@ -274,7 +328,7 @@ private struct XcodebuildSettings {
     func toParams() -> [String] {
         var args: [String] = [
             "-project", project,
-            "-scheme", scheme,
+            "-target", target,
             "-configuration", configuration,
         ]
 

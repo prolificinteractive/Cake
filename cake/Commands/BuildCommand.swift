@@ -38,30 +38,54 @@ internal struct BuildCommand: CommandType {
 
         return
             printOut("Preparing environment")
-            .then( rm(outputDirectory) )
+            .then(
+                SignalProducer<TaskEvent<NSData>, TaskError> { (observer, _) in
+                    guard options.clean else {
+                        SignalProducer.empty.start(observer)
+                        return
+                    }
+
+                    rm(outputDirectory)
+                        .then( mkdir(outputDirectory) )
+                        .start(observer)
+                }
+            )
             .then( printOut("Fetching dependencies") )
             .then(
                 Pod.install()
                     .filter { _ in options.verbose }
                     .stream()
             )
-            .then( mv("Pods", "tmp") )
-            .then( mkdir(outputDirectory) )
-            .then( mv("tmp", outputDirectory.stringByAppendingPathComponent("Checkout")) )
-            .then( printOut("Building dependencies") )
+            .then( printOut("Building Dependencies") )
             .then(
-                xcodebuild(podsProjectDirectory, scheme: podsScheme, sdk: .Simulator, configurationBuildDir: "../Build/simulator")
-                    .filter { _ in options.verbose }
-                    .stream()
-                    .then(cleanExtraFrameworks(inDirectory: simulatorOutputDirectory))
+                fetchAllTargets("Pods/Pods.xcodeproj")
+                    .flatMap(.Concat) { targets in
+                        return diff(targets: targets, oldDirectory: "Pods", newDirectory: checkoutDirectory)
+                }
+                    .flatMap(.Concat) { targets in
+                        return targets.reduce(SignalProducer<(), TaskError>.empty) { (current, next) in
+                            current
+                                .then ( printOut("> \(next)") )
+                                .then (
+                                    xcodebuild("Pods/Pods.xcodeproj", target: next, sdk: .Simulator, configurationBuildDir: "../Cake/Build/simulator")
+                                        .filter { _ in options.verbose }
+                                        .stream()
+                                        .map { _ in }
+                                        .then(cleanExtraFrameworks(inDirectory: simulatorOutputDirectory))
+                                        .then(
+                                            xcodebuild("Pods/Pods.xcodeproj", target: next, sdk: .iPhoneOS, configurationBuildDir: "../Cake/Build/iphone")
+                                                .filter { _ in options.verbose }
+                                                .stream()
+                                                .then(cleanExtraFrameworks(inDirectory: iphoneOutputDirectory))
+                                                .map { _ in }
+                                )
+                            )
+                        }
+                }
             )
-            .then(
-                xcodebuild(podsProjectDirectory, scheme: podsScheme, sdk: .iPhoneOS, configurationBuildDir: "../Build/iphone")
-                    .filter { _ in options.verbose }
-                    .stream()
-                    .then(cleanExtraFrameworks(inDirectory: iphoneOutputDirectory))
-            )
+            .then( rm(checkoutDirectory) )
             .then( mkdir(buildOutputDirectory) )
+            .then( mv("Pods", checkoutDirectory) )
             .then( printOut("Generating frameworks") )
             .then (
                 generateFatBinaries(iphoneOutputDirectory,
@@ -88,10 +112,9 @@ internal struct BuildCommand: CommandType {
             .then (
                 rm(buildDirectory.stringByAppendingPathComponent("Pods.build"))
             )
+            .then ( rm("build") )
             .then( printOut("Build complete!") )
             .waitOnResult()
     }
-
-
 
 }

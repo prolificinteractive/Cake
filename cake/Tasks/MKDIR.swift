@@ -9,6 +9,10 @@
 import ReactiveCocoa
 
 internal func mkdir(dir: String) -> SignalProducer<TaskEvent<NSData>, TaskError> {
+    guard !NSFileManager.defaultManager().fileExistsAtPath(dir) else {
+        return SignalProducer.empty
+    }
+    
     let task = Task("/bin/mkdir", arguments: [dir])
     return launchTask(task)
 }

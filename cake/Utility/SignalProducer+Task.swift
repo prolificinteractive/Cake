@@ -50,3 +50,14 @@ extension SignalProducerType where Value: StringLiteralConvertible {
     }
 
 }
+
+extension SignalProducerType where Value == [String] {
+
+    func trim() -> SignalProducer<[String], Error> {
+        return producer
+            .map {
+                $0.map { $0.stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet()) }
+        }
+    }
+
+}
