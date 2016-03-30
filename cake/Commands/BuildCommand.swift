@@ -57,6 +57,7 @@ internal struct BuildCommand: CommandType {
                     .stream()
             )
             .then( printOut("Building Dependencies") )
+            .then ( printOut("Architectures: \(options.sdks.reduce("") { $0 + " " + $1.rawValue })") )
             .then(
                 fetchAllTargets("Pods/Pods.xcodeproj")
                     .flatMap(.Concat) { targets in
@@ -67,18 +68,12 @@ internal struct BuildCommand: CommandType {
                             current
                                 .then ( printOut("> \(next)") )
                                 .then (
-                                    xcodebuild("Pods/Pods.xcodeproj", target: next, sdk: .Simulator, configurationBuildDir: "../Cake/Build/simulator")
+                                    build(project: "Pods/Pods.xcodeproj", target: next, sdks: options.sdks, configurationBuildDir: "../Cake/Build/simulator")
                                         .filter { _ in options.verbose }
                                         .stream()
+                                        .then( cleanExtraFrameworks(inDirectory: simulatorOutputDirectory) )
+                                        .then( cleanExtraFrameworks(inDirectory: iphoneOutputDirectory) )
                                         .map { _ in }
-                                        .then(cleanExtraFrameworks(inDirectory: simulatorOutputDirectory))
-                                        .then(
-                                            xcodebuild("Pods/Pods.xcodeproj", target: next, sdk: .iPhoneOS, configurationBuildDir: "../Cake/Build/iphone")
-                                                .filter { _ in options.verbose }
-                                                .stream()
-                                                .then(cleanExtraFrameworks(inDirectory: iphoneOutputDirectory))
-                                                .map { _ in }
-                                )
                             )
                         }
                 }

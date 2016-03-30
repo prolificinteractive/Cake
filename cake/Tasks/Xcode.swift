@@ -11,10 +11,10 @@ import ReactiveCocoa
 private let xcodebuildPath = "/usr/bin/xcodebuild"
 private let lipoPath = "/usr/bin/lipo"
 
-internal enum SDK {
+internal enum SDK: String {
 
-    case Simulator
-    case iPhoneOS
+    case Simulator = "simulator"
+    case iPhoneOS = "iphone"
 
     var buildParams: [String] {
         switch self {
@@ -72,6 +72,28 @@ internal func diff(leftDirectory: String, _ rightDirectory: String) -> SignalPro
             return data.length > 0
         }
         .flatMapError { _ in SignalProducer(value: true) }
+}
+
+internal func build(project project: String, target: String, sdks: [SDK], configurationBuildDir: String) -> SignalProducer<TaskEvent<NSData>, TaskError> {
+    let simulatorSignal = SignalProducer<TaskEvent<NSData>, TaskError> { (observer, _) in
+        guard sdks.contains(.Simulator) else {
+            SignalProducer.empty.start(observer)
+            return
+        }
+
+        xcodebuild(project, target: target, sdk: .Simulator, configurationBuildDir: configurationBuildDir).start(observer)
+    }
+
+    let iphoneSignal = SignalProducer<TaskEvent<NSData>, TaskError> { (observer, _) in
+        guard sdks.contains(.iPhoneOS) else {
+            SignalProducer.empty.start(observer)
+            return
+        }
+
+        xcodebuild(project, target: target, sdk: .iPhoneOS, configurationBuildDir: configurationBuildDir).start(observer)
+    }
+
+    return simulatorSignal.concat(iphoneSignal)
 }
 
 internal func xcodebuild(project: String, target: String,
