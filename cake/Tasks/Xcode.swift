@@ -371,7 +371,8 @@ private struct XcodebuildSettings {
             "ONLY_ACTIVE_ARCH=NO",
             "CONFIGURATION_BUILD_DIR=\(configurationBuildDir)",
             "CODE_SIGNING_REQUIRED=NO",
-            "CODE_SIGNING_ALLOWED=NO"
+            "CODE_SIGNING_ALLOWED=NO",
+            "BITCODE_GENERATION_MODE=bitcode",
         ])
 
         return args
