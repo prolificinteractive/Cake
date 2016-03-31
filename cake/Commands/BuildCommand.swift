@@ -68,7 +68,7 @@ internal struct BuildCommand: CommandType {
                             current
                                 .then ( printOut("> \(next)") )
                                 .then (
-                                    build(project: "Pods/Pods.xcodeproj", target: next, sdks: options.sdks, configurationBuildDir: "../Cake/Build/simulator")
+                                    build(project: "Pods/Pods.xcodeproj", target: next, sdks: options.sdks, configurationBuildDir: "../Cake/Build/")
                                         .filter { _ in options.verbose }
                                         .stream()
                                         .then( cleanExtraFrameworks(inDirectory: simulatorOutputDirectory) )

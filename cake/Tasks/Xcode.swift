@@ -81,7 +81,10 @@ internal func build(project project: String, target: String, sdks: [SDK], config
             return
         }
 
-        xcodebuild(project, target: target, sdk: .Simulator, configurationBuildDir: configurationBuildDir).start(observer)
+        xcodebuild(project, target: target,
+            sdk: .Simulator,
+            configurationBuildDir: configurationBuildDir.stringByAppendingPathComponent(SDK.Simulator.rawValue)
+        ).start(observer)
     }
 
     let iphoneSignal = SignalProducer<TaskEvent<NSData>, TaskError> { (observer, _) in
@@ -90,7 +93,12 @@ internal func build(project project: String, target: String, sdks: [SDK], config
             return
         }
 
-        xcodebuild(project, target: target, sdk: .iPhoneOS, configurationBuildDir: configurationBuildDir).start(observer)
+        xcodebuild(
+            project,
+            target: target,
+            sdk: .iPhoneOS,
+            configurationBuildDir: configurationBuildDir.stringByAppendingPathComponent(SDK.iPhoneOS.rawValue)
+        ).start(observer)
     }
 
     return simulatorSignal.concat(iphoneSignal)
