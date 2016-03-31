@@ -361,7 +361,9 @@ private struct XcodebuildSettings {
         args.appendContentsOf(sdk.buildParams)
         args.appendContentsOf([
             "ONLY_ACTIVE_ARCH=NO",
-            "CONFIGURATION_BUILD_DIR=\(configurationBuildDir)"
+            "CONFIGURATION_BUILD_DIR=\(configurationBuildDir)",
+            "CODE_SIGNING_REQUIRED=NO",
+            "CODE_SIGNING_ALLOWED=NO"
         ])
 
         return args
