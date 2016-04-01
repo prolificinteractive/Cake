@@ -173,6 +173,7 @@ internal func generateFatBinaries(osPath: String, simulatorPath: String, outputD
                 }
 
                 output = output.then( lipo(simulatorExecutablePath, secondPath: osExecutablePath, output: outputLipoPath) )
+                    .then( rm (outputPath) )
                     .then( cp(osFrameworkPath, outputPath) )
                     .then( mv(outputLipoPath, outputPath) )
                     .then(
