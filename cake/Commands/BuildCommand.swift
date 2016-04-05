@@ -103,7 +103,11 @@ internal struct BuildCommand: CommandType {
                 copyLibraries(podsProjectDirectory, scheme: podsScheme,
                     configuration: "Release", toDirectory: buildOutputDirectory)
             )
-             .then( printOut("Cleaning up") )
+            .then ( printOut("Copying bundles") )
+            .then(
+                copyBundles(foundInDirectory: checkoutDirectory, toDirectory: buildOutputDirectory)
+            )
+            .then( printOut("Cleaning up") )
             .then (
                 rm(buildDirectory.stringByAppendingPathComponent("Pods.build"))
             )

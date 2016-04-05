@@ -275,6 +275,17 @@ internal func copyLibraries(projectPath: String, scheme: String, configuration: 
     }
 }
 
+internal func copyBundles(foundInDirectory rootDirectory: String, toDirectory directory: String) -> SignalProducer<TaskEvent<NSData>, TaskError> {
+    return find(rootDirectory, pattern: "*.bundle")
+        .mapOutputToString()
+        .split()
+        .flatMap(.Concat) { files in
+            return files.reduce(SignalProducer<TaskEvent<NSData>, TaskError>.empty) { (signal, file) in
+                return signal.then(cp(file, directory))
+            }
+    }
+}
+
 internal func buildSettings(projectPath: String, scheme: String, configuration: String) -> SignalProducer<[String: String], TaskError> {
     let task = Task(xcodebuildPath,
         arguments: ["-project", projectPath, "-scheme", scheme, "-configuration", configuration, "-showBuildSettings"])
