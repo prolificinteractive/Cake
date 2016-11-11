@@ -1,4 +1,4 @@
-# [UNMAINTAINED] Cake
+# [DEPRECATED] Cake
 
 ⚠️ **This repository is no longer maintained or supported. New pull requests will not be reviewed.** ⚠️
 
