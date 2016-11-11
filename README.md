@@ -1,6 +1,6 @@
 # [UNMAINTAINED] Cake
 
-⚠️ **This repository is no longer maintained or supported. Pull requests opened will not be reviewed.** ⚠️
+⚠️ **This repository is no longer maintained or supported. New pull requests will not be reviewed.** ⚠️
 
 Cake is a wrapper for Cocoapods that aims to replicate the behavior of Carthage while maintaining the central
 database of Pods that Cocoapods provides. This allows you to pull pods and manage dependencies using Cocoapods without
